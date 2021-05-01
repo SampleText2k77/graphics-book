@@ -1,34 +1,75 @@
+#include <stdio.h>
+
+#define EPS 0.01
+
+#define GLM_FORCE_RADIANS
+#define GLM_SWIZZLE
+#include <glm/vec2.hpp>
+#include <glm/geometric.hpp>
+
 bool isConvex ( const glm::vec2 v [], int n )
 {
-    glm::vec2 prev = v [n-1];
-    glm::vec2 cur, dir, n;
-    float     d, dp;
-    int       sign, s;
-
+    glm::vec2 prev = v[n-1];
     for ( int i = 0; i < n; i++ )
     {
-        cur  = v [i];
-        dir  = cur - prev;                 // edge direction vector
-        n    = glm::vec2 ( dir.y, -dir.x );// normal to edge [prev, cur]
-        d    = -glm::dotdot ( n, cur );    // so line's equation is (p,n) + d = 0
-        sign = 0;                          // unknown yet
+        // Текущая точка
+        glm::vec2 cur = v [i];
+
+        // Вектор текущего ребра
+        glm::vec2 dir = cur - prev;
+
+        // Вектор нормали к текущему ребру
+        glm::vec2 c = glm::vec2 ( dir.y, -dir.x );
+
+        // Расстояние от текущего ребра до начала координат (формула (n,u) + d = 0; d = -(n,u))
+        float d = -glm::dot ( c, cur );
+
+        // Где находятся остальные точки - пока неизвестно
+        int sign = 0;
 
         for ( int j = 0; j < n; j++ )
         {
-            dp = d + glm::dot ( n, v [j] );
+            // Подставляем текущую точку в уравнение прямой. Тем самым находим её расстояние от этой прямой
+            float dp = d + glm::dot ( c, v [j] );
 
-            if ( fabs ( dp ) < EPS )       // too small
+            // Проверка на то, что точка лежит на данной прямой. Вообще говоря, даёт возможность не
+            // делать дополнительной проверки для точек, являющихся компонентами текущего ребра
+            if ( fabs ( dp ) < EPS )
                continue;
-				
-            s = dp > 0 ? 1 : -1;           // sign for v [j]
-			
+
+            // Находим, с какой стороны от прямой находится данная точка
+            int s = dp > 0 ? 1 : -1;
+
+            // Если ещё не вычисляли, где находятся другие точки, будем считать местоположение этой как базовое
             if ( sign == 0 )
+            {
                sign = s;
-            else
-            if ( sign != s )
+            }
+
+            // Иначе если точка находится с другой стороны - многоугольник не выпуклый
+            else if ( sign != s )
+            {
                 return false;
+            }
         }
+
+        // А эту инструкцию указать в примере забыли. Без неё ничего не заработает
+        prev = cur;
     }
 
     return true;
+}
+
+int main (int argc, char * argv [])
+{
+    glm::vec2 points[] = {
+        glm::vec2(1, 1),
+        glm::vec2(1, 3),
+        glm::vec2(2, 4),
+        glm::vec2(3, 3),
+        glm::vec2(3, 1)
+    };
+
+    bool result = isConvex(points, 5);
+    printf("%d\n", result);
 }
